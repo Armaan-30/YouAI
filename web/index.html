@@ -5,6 +5,7 @@
 <main><div class="eyebrow">A LITTLE MORE HUMAN.</div><h1>A thought away.</h1><p class="intro">Something on your mind? I’m listening.</p>
 <div class="orb-stage"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><button id="orb" data-state="idle" aria-label="Start listening"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="12" y="5" width="8" height="15" rx="4"></rect><path d="M8 15v2a8 8 0 0 0 16 0v-2M16 25v4M12 29h8"></path></svg><span class="stop-icon"></span></button></div>
 <div class="state" id="state" role="status" aria-live="polite">Getting ready</div><p id="hint" class="hint">Your own space to think out loud.</p>
+<p id="provider-notice" class="fine" hidden></p>
 <p id="error" role="alert" hidden></p>
 <section id="reminder-alert" hidden aria-live="polite"><strong id="reminder-summary"></strong><div id="due-reminders"></div></section>
 <div id="latest" class="latest" hidden><p id="latest-text"></p><button id="replay" class="quiet">Hear it again</button></div>
@@ -14,7 +15,7 @@
 <form id="composer"><label for="prompt" class="sr-only">Message You</label><input id="prompt" placeholder="Or type a thought…" autocomplete="off" maxlength="6000"><button type="submit" aria-label="Send message">↑</button></form>
 <label class="wake"><input type="checkbox" id="wake"><span class="toggle"></span> Listen for “Hey You” <span class="beta">PREVIEW</span></label>
 <p id="wake-help" class="fine">Off by default. When enabled, your microphone stays on while this page is active.</p>
-</main><footer><span><i></i> On your laptop. In your control.</span><span>YOU / WINDOWS PREVIEW</span></footer>
+</main><footer><span id="processing-location">On your laptop. In your control.</span><span>YOU / WINDOWS PREVIEW</span></footer>
 <dialog id="panel"><div class="panel-heading"><h2>Your space</h2><button id="close-panel" class="quiet" aria-label="Close conversation">✕</button></div>
 <p class="panel-note">Conversations and notes are saved on this laptop. Models download once during setup.</p>
 <div class="options"><label><input type="checkbox" id="speak" checked> Speak replies with an installed local voice</label><button id="clear" class="quiet">Clear conversation</button></div>
@@ -35,4 +36,4 @@
 <form id="action-form"><select id="action-location" aria-label="Approved location"></select><select id="action-operation"><option value="search">Search filenames</option><option value="create">Create TXT/Markdown</option><option value="watch">Auto-index documents in folder</option><option value="open">Open application</option></select><input id="action-name" placeholder="Search words or new filename"><textarea id="action-content" placeholder="New file contents"></textarea><button class="quiet">Preview action / search</button></form><pre id="action-result"></pre><button id="action-confirm" class="quiet" hidden>Confirm this action</button>
 <h3>Search conversation</h3><form id="history-search-form"><input id="history-query" placeholder="Search saved messages"><button class="quiet">Search</button></form><div id="history-results"></div>
 <div id="history" aria-label="Conversation history"></div><h3>Saved notes</h3><p class="panel-note">Try “Save a note: my next idea…”</p><div id="notes"></div>
-<div class="details"><h3>About this preview</h3><p>Continuous local “Hey You” recognition · Whisper transcription · streaming local AI answers · local spoken replies. Keep this page visible for wake listening. Microphone capture pauses during answers so YouAI does not trigger itself.</p><p>Tasks: save, read and search notes; set, list and cancel reminders and timers. Document answers include retrieved passages. Calendar integration is not yet available.</p><button id="retry" class="quiet">Check connection again</button></div></dialog></body></html>
+<div class="details"><h3>About this preview</h3><p>Continuous local “Hey You” recognition · Whisper transcription · streaming AI answers through the configured provider · local spoken replies. Keep this page visible for wake listening. Microphone capture pauses during answers so YouAI does not trigger itself.</p><p>Tasks: save, read and search notes; set, list and cancel reminders and timers. Document answers include retrieved passages. Calendar integration is not yet available.</p><button id="retry" class="quiet">Check connection again</button></div></dialog></body></html>

@@ -2,6 +2,9 @@
 import asyncio,ipaddress,socket,sys,tempfile
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parent.parent))
+import os
+os.environ['YOUAI_LLM_PROVIDER']='ollama'
+os.environ['YOUAI_SPEECH_PROVIDER']='local'
 from app.main import speech,answer
 from app.storage import Store
 from app.rag import Rag

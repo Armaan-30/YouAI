@@ -4,7 +4,7 @@ Android development is paused. This release focuses on the existing Windows lapt
 
 ## Install and start
 
-Run `dist/YouAI Setup 0.4.0.exe` to install the desktop app for your Windows account. The installer now includes the Python backend source and web assets; it no longer needs a project checkout. On first launch, automatic setup reuses a supported Python/Ollama installation or downloads them, creates a private Python environment, installs dependencies, and downloads Whisper, Vosk, Qwen, embeddings and five OCR languages. Internet and several GB of disk space are required for first setup. A progress window and `runtime/setup.log` in Electron's user-data directory provide diagnostics. Closing setup cancels it; launching again retries. Models and personal data are retained separately when updating the app.
+Run `dist/YouAI Setup 0.4.1.exe` to install the desktop app for your Windows account. The installer now includes the Python backend source and web assets; it no longer needs a project checkout. On first launch, automatic setup reuses a supported Python/Ollama installation or downloads them, creates a private Python environment, installs dependencies, and downloads Whisper, Vosk, Qwen, embeddings and five OCR languages. Internet and several GB of disk space are required for first setup. A progress window and `runtime/setup.log` in Electron's user-data directory provide diagnostics. Closing setup cancels it; launching again retries. Models and personal data are retained separately when updating the app.
 
 This is an unsigned development installer. Automated dependency setup is not an offline installer with all model weights embedded. Third-party licenses are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
@@ -55,3 +55,7 @@ Build/check commands: `npm run package:windows`, `node scripts/smoke_desktop.cjs
 See THIRD_PARTY_NOTICES.md before distributing binaries. PyMuPDF is installed during setup under its own AGPL/commercial terms; the repository MIT license does not replace those terms.
 
 Detailed evidence and the remaining human checks are in [RELEASE_CHECKS.md](RELEASE_CHECKS.md).
+
+## Optional Groq chat and transcription
+
+Version 0.4.1 adds server-side Groq support for Qwen 3.8 27B and Whisper Large v3 Turbo. See the README configuration steps. The UI discloses online processing: chat context includes recent history, approved memories and supplied document passages; voice requests are uploaded for transcription. Wake detection, installed voices and embeddings remain local. API errors do not silently switch providers. A new checkout defaults to local processing.

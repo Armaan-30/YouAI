@@ -7,6 +7,8 @@ from uuid import uuid4
 
 TEMP = tempfile.TemporaryDirectory()
 os.environ["YOUAI_DATA_DIR"] = TEMP.name
+os.environ["YOUAI_LLM_PROVIDER"] = "ollama"
+os.environ["YOUAI_SPEECH_PROVIDER"] = "local"
 from fastapi.testclient import TestClient
 from app import main
 

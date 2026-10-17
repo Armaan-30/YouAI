@@ -1,9 +1,9 @@
-# Windows 0.4 release checks
+# Windows 0.4.1 release checks
 
 ## Verified on this laptop
 
-- Python suite: 35 checks passed (memory, actions, document coverage, cancellation, OCR configuration, search privacy/errors, reminder persistence and existing voice/RAG behavior).
-- Browser suite: 15 checks passed, covering voice handoff/interruption, permissions, OCR upload choice and summary progress.
+- Python suite: 43 checks passed (memory, actions, document coverage, cancellation, OCR configuration, search privacy/errors, reminder persistence and existing voice/RAG behavior).
+- Browser suite: 16 checks passed, covering voice handoff/interruption, permissions, OCR upload choice and summary progress.
 - Live free DuckDuckGo search returned official Python sources; Qwen answered with source cards. Inline citations are model-generated and may vary.
 - Real Qwen hierarchical summary retained facts from the beginning and end of the fixture.
 - Image-only PDFs rendered and recognized in English, Hindi, Spanish, French and German.
@@ -14,6 +14,8 @@
 - Installed executable ran its bundled backend with the separate environment. Preload bridge, native Zira voice discovery, shortcut and tray behavior passed.
 - Windows emitted the native notification show event while the window was hidden, and the delivery acknowledgment was persisted.
 - Git excludes models, Python environments, generated installers, databases, pairing certificates and .env secrets.
+
+Groq integration additionally passed live model availability, streamed chat persistence, synthetic audio transcription and synthetic document grounding checks. Mocked tests cover authorization, sanitized API failures, incomplete streams, reasoning exclusion, status caching and cancellation. Real microphone testing through the new Groq transcription path has not yet been confirmed by the user.
 
 ## Human acceptance (do not mark passed without observation)
 

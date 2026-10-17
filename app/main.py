@@ -20,25 +20,35 @@ from app import tasks
 from app.rag import Rag, MAX_BYTES
 from app import mobile, features, web_search
 from app.summarize import summarize
+from app.config import setting
+from app.groq_provider import GroqProvider, ProviderError, SPEECH_MODEL
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = Path(os.getenv("YOUAI_DATA_DIR", str(Path(os.getenv("LOCALAPPDATA", str(ROOT / ".runtime"))) / "YouAI")))
 store = Store(DATA / "youai.sqlite3")
 rag = Rag(store)
 speech = Speech(DATA / "models")
-MODEL = os.getenv("YOUAI_MODEL", "qwen2.5:3b")
+PROVIDER = setting('YOUAI_LLM_PROVIDER', 'ollama')
+SPEECH_PROVIDER = setting('YOUAI_SPEECH_PROVIDER', 'local')
+if PROVIDER not in ('ollama', 'groq') or SPEECH_PROVIDER not in ('local', 'groq'):
+    raise ValueError('Choose ollama/groq for chat and local/groq for speech recognition.')
+MODEL = setting('YOUAI_GROQ_MODEL', 'qwen/qwen3.8-27b') if PROVIDER == 'groq' else os.getenv('YOUAI_MODEL', 'qwen2.5:3b')
+groq = GroqProvider(setting('YOUAI_GROQ_MODEL', 'qwen/qwen3.8-27b'))
 OLLAMA = "http://127.0.0.1:11434"
 wake = WakeEngine(DATA / "models")
 
 async def warm_models():
     try:
-        await asyncio.to_thread(speech.load)
+        if SPEECH_PROVIDER == 'local':
+            await asyncio.to_thread(speech.load)
     except Exception:
         pass  # A missing model is reported by the transcription endpoint.
     try:
         await asyncio.to_thread(wake.recognizer)
     except Exception:
         pass
+    if PROVIDER == 'groq':
+        return
     try:
         async with httpx.AsyncClient(timeout=60, trust_env=False) as client:
             await client.post(OLLAMA + "/api/generate",
@@ -105,6 +115,13 @@ def mobile_pairing(request: Request):
 
 @app.get("/api/status")
 async def status():
+    if PROVIDER == 'groq':
+        remote = await groq.status()
+        return {'model': MODEL, 'provider': PROVIDER, 'llm_ready': remote['ready'],
+                'speech_provider': SPEECH_PROVIDER,
+                'speech_loaded': remote['speech_ready'] if SPEECH_PROVIDER == 'groq' else speech.model is not None,
+                'speech_model': SPEECH_MODEL if SPEECH_PROVIDER == 'groq' else speech.name,
+                'wake_ready': wake.path.is_dir(), 'timezone': tasks.ZONE.key, 'error': remote['error']}
     available = []
     error = None
     try:
@@ -115,8 +132,9 @@ async def status():
     except (httpx.HTTPError, ValueError):
         error = "Ollama is not running. Open Ollama, then retry."
     ready = MODEL in available
-    return {"model": MODEL, "llm_ready": ready, "speech_loaded": speech.model is not None,
-            "speech_model": speech.name, "wake_ready": wake.path.is_dir(),
+    return {"model": MODEL, 'provider': PROVIDER, "llm_ready": ready, "speech_loaded": speech.model is not None,
+            'speech_provider': SPEECH_PROVIDER,
+            "speech_model": SPEECH_MODEL if SPEECH_PROVIDER == 'groq' else speech.name, "wake_ready": wake.path.is_dir(),
             "timezone": tasks.ZONE.key,
             "error": error or (None if ready else f"Download the model: ollama pull {MODEL}")}
 
@@ -198,7 +216,11 @@ async def transcribe(audio: UploadFile, language: str = Form("auto")):
         try:
             if language not in ('auto','en','hi','es','fr','de'):
                 raise ValueError('Unsupported language selection')
+            if SPEECH_PROVIDER == 'groq':
+                return await groq.transcribe(data, None if language == 'auto' else language)
             return await asyncio.to_thread(speech.transcribe, data, None if language=='auto' else language)
+        except ProviderError as error:
+            raise HTTPException(503, str(error)) from None
         except Exception as error:
             raise HTTPException(503, "Could not transcribe audio. Check the microphone and run setup.ps1 to install the speech model.") from error
 
@@ -248,7 +270,8 @@ async def cancel(turn_id: UUID):
     return {"ok": True}
 
 def identity_answer(prompt):
-    identity = f"I'm YouAI, running locally on your laptop using {MODEL} through Ollama."
+    identity = (f"I'm YouAI, using {MODEL} hosted by Groq. My chat responses require internet."
+                if PROVIDER == 'groq' else f"I'm YouAI, running locally on your laptop using {MODEL} through Ollama.")
     # Runtime identity is configuration, not something the model should guess.
     question = re.sub(r"[^a-z0-9\s]", "", prompt.lower())
     question = " ".join(question.split())
@@ -265,7 +288,7 @@ def identity_answer(prompt):
 def model_messages(prompt, context, sources=None):
     system = (
         f"You are YouAI, a helpful voice assistant running locally on Windows. "
-        f"Your configured language model is {MODEL}, served locally by Ollama. "
+        f"Your configured language model is {MODEL}, served {'online by Groq' if PROVIDER == 'groq' else 'locally by Ollama'}. "
         "These runtime facts override any mistaken identity claims in conversation history. "
         "When asked about your identity, accurately state the app name and configured model. "
         "Do not claim to be Claude or a hosted ChatGPT service. "
@@ -309,6 +332,8 @@ async def answer(prompt, context, sources=None):
     if identity := identity_answer(prompt):
         return identity
     messages = model_messages(prompt, context, sources)
+    if PROVIDER == 'groq':
+        return await groq.answer(messages)
     async with httpx.AsyncClient(timeout=180, trust_env=False) as client:
         response = await client.post(OLLAMA + "/api/chat", json={
             "model": MODEL, "messages": messages, "stream": False, "keep_alive": "30m",
@@ -323,6 +348,10 @@ async def answer(prompt, context, sources=None):
 async def stream_answer(prompt, context, sources=None):
     if identity := identity_answer(prompt):
         yield identity
+        return
+    if PROVIDER == 'groq':
+        async for token in groq.stream(model_messages(prompt, context, sources)):
+            yield token
         return
     async with httpx.AsyncClient(timeout=180, trust_env=False) as client:
         async with client.stream("POST", OLLAMA + "/api/chat", json={
@@ -417,6 +446,8 @@ async def run_turn(turn: Turn, request=None, emit=None):
             return {"text": result, "turn_id": key, "sources":sources}
         except HTTPException:
             raise
+        except ProviderError as error:
+            raise HTTPException(503, str(error)) from None
         except (httpx.HTTPError, ValueError, KeyError) as error:
             raise HTTPException(503, "The local model could not answer. Check that Ollama is running and the model is downloaded.") from error
         finally:
@@ -443,7 +474,7 @@ async def chat_stream(turn: Turn):
             except HTTPException as error:
                 queue.put_nowait({"type": "error", "message": error.detail})
             except Exception:
-                queue.put_nowait({"type": "error", "message": "The local answer could not finish. Please try again."})
+                queue.put_nowait({"type": "error", "message": "The answer could not finish. Please try again."})
             finally:
                 queue.put_nowait(None)
         worker = asyncio.create_task(produce())

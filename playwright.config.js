@@ -9,6 +9,6 @@ module.exports = defineConfig({
     command: ".venv\\Scripts\\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8766",
     url: "http://127.0.0.1:8766/",
     reuseExistingServer: false,
-    env: {YOUAI_DATA_DIR:path.resolve(".runtime/browser-tests"), YOUAI_PRELOAD:"0"},
+    env: {YOUAI_DATA_DIR:path.resolve(".runtime/browser-tests"), YOUAI_PRELOAD:"0", YOUAI_LLM_PROVIDER:"ollama", YOUAI_SPEECH_PROVIDER:"local"},
   }
 });

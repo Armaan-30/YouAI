@@ -22,7 +22,12 @@ async function refresh() {
   try {
     const result = await api("/api/status");
     ready = result.llm_ready;
-    $("connection").textContent = ready ? "Local model connected" : "Local model unavailable";
+    const onlineChat=result.provider==='groq', onlineSpeech=result.speech_provider==='groq';
+    $("connection").textContent = ready ? (onlineChat ? 'Groq connected · '+result.model : 'Local model connected') : (onlineChat ? 'Groq unavailable' : 'Local model unavailable');
+    const notice=$('provider-notice');notice.hidden=!(onlineChat||onlineSpeech);
+    notice.textContent=[onlineChat?'Online chat: messages, recent conversation, approved memories and document passages used for answers/summaries are sent to Groq.':'',onlineSpeech?'Voice requests are uploaded to Groq for transcription. Wake listening and spoken playback stay local.':''].filter(Boolean).join(' ');
+    $('processing-location').textContent=onlineChat||onlineSpeech?'Groq online processing · storage on your laptop':'On your laptop. In your control.';
+    hints.transcribing=onlineSpeech?'Transcribing your voice through Groq.':'Turning your voice into words, here on your laptop.';
     if (!ready) showError(result.error);
     else showError("");
   } catch { $("connection").textContent = "App disconnected"; showError("The local app is offline. Run start.ps1, then reload this page."); }

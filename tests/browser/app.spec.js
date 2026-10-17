@@ -35,6 +35,16 @@ test("microphone denial gives a useful recovery message", async ({page})=>{
   await expect(page.locator("#state")).toHaveText("Tap to talk");
 });
 
+test('Groq mode clearly discloses remote context and audio processing',async({page})=>{
+ await page.route('**/api/status',route=>route.fulfill({json:{llm_ready:true,provider:'groq',speech_provider:'groq',model:'qwen/qwen3.8-27b'}}));
+ await page.reload();
+ await expect(page.locator('#connection')).toContainText('Groq connected');
+ await expect(page.locator('#provider-notice')).toBeVisible();
+ await expect(page.locator('#provider-notice')).toContainText('approved memories and document passages');
+ await expect(page.locator('#provider-notice')).toContainText('Voice requests are uploaded');
+ await expect(page.locator('#processing-location')).toContainText('Groq online processing');
+});
+
 test("cancellation ignores a stale model reply",async({page})=>{
   await page.route("**/api/chat/stream",async route=>{
     await new Promise(resolve=>setTimeout(resolve,1200));

@@ -4,6 +4,9 @@ import sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parent.parent))
 from app import web_search
+import os
+os.environ['YOUAI_LLM_PROVIDER']='ollama'
+os.environ['YOUAI_SPEECH_PROVIDER']='local'
 from app.main import answer
 from app.summarize import summarize
 

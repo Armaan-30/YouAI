@@ -7,6 +7,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import numpy as np
 from faster_whisper.audio import decode_audio
+import os
+os.environ['YOUAI_LLM_PROVIDER']='ollama'
+os.environ['YOUAI_SPEECH_PROVIDER']='local'
 from app.main import wake, stream_answer
 
 async def main():

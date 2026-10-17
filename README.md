@@ -2,7 +2,7 @@
 
 YouAI is a local-first personal assistant with a simple circular microphone button. Click it or enable **“Hey You”**, speak naturally, and receive a spoken response. You can also type, ask questions about your documents, save approved memories, set reminders, and perform a small set of approved laptop actions.
 
-**Version 0.4.0 · Windows preview · Status updated 17 October 2026**
+**Version 0.4.1 · Windows preview · Status updated 17 October 2026**
 
 The working implementation runs on a Windows laptop. Android development is paused, iOS is not implemented, and public cloud deployment is not configured. This is a functional preview with documented test limits, not a production-ready hosted service.
 
@@ -10,7 +10,7 @@ The working implementation runs on a Windows laptop. Android development is paus
 
 Implemented:
 
-- Local voice and text conversations with streamed answers, sentence-by-sentence playback, cancellation and replay.
+- Voice and text conversations with streamed answers, sentence-by-sentence playback, cancellation and replay.
 - Opt-in “Hey You” detection, wake sensitivity, pause duration, language settings and spoken interruption.
 - Installed Windows voices, preferring Microsoft Zira or Heera when available; voice selection and speaking-rate controls.
 - Persistent conversation history, searchable notes, timers and reminders.
@@ -21,11 +21,12 @@ Implemented:
 - Approved folder indexing, filename search, application launching and creation of new text/Markdown files.
 - Electron desktop window, tray icon, optional startup with Windows, **Ctrl+Alt+Space**, and native reminder notifications.
 - Free opt-in DuckDuckGo search without an account or API key; optional Brave integration.
+- Optional Groq chat and speech recognition, with visible online-processing disclosure and local Ollama mode retained.
 - Windows installer containing the backend source and interface, with first-run dependency and model setup.
 
 Validation completed:
 
-- **35 Python tests + 15 browser tests passed.**
+- **43 Python tests + 16 browser tests passed.**
 - Live free search, local-model answers, hierarchical summaries and scanned-page OCR in all five languages were exercised.
 - Five synthetic wake recordings passed; the local transcription/RAG/generation pipeline passed with outbound Python sockets blocked.
 - Automated installer execution and the installed desktop app were tested using a separately provisioned backend environment.
@@ -42,7 +43,7 @@ The installer is **unsigned**. See [release checks](RELEASE_CHECKS.md) for the e
 
 ## Which AI models does it use?
 
-**The default conversational model is Qwen2.5 3B, running locally through Ollama as `qwen2.5:3b`.** There is no Claude or cloud chat API in the default conversation pipeline.
+**The default conversational model is Qwen2.5 3B, running locally through Ollama as `qwen2.5:3b`.** Local mode remains the default for a new checkout. Optional Groq mode uses hosted Qwen 3.8 27B and Whisper Large v3 Turbo; it requires internet and your own backend API key.
 
 - **Conversation:** `qwen2.5:3b` generates answers through Ollama on `127.0.0.1:11434`.
 - **Document embeddings:** `nomic-embed-text` through Ollama converts document passages and questions into vectors for retrieval.
@@ -73,17 +74,17 @@ flowchart TD
     RAG --> CONTEXT
     ROUTER -->|Opt-in web mode| SEARCH[DuckDuckGo or configured Brave search]
     SEARCH -->|Source snippets| CONTEXT
-    CONTEXT --> LLM[Local Ollama Qwen2.5 3B]
+    CONTEXT --> LLM[Local Ollama Qwen2.5 3B or hosted Groq Qwen 3.8 27B]
     LLM --> STREAM[Streamed answer and source cards]
     STREAM --> UI
     STREAM --> TTS[Local Windows voice]
     TTS --> SPEAKER[Speakers or headphones]
 ```
 
-1. The microphone button or opt-in wake listener starts a voice request. Audio is processed locally; typing joins the same conversation pipeline.
+1. The microphone button or opt-in wake listener starts a voice request. Wake recognition stays local; request audio is transcribed locally or sent to Groq according to configuration. Typing joins the same conversation pipeline.
 2. Whisper transcribes the request. FastAPI routes supported note/reminder commands deterministically, rather than asking the LLM to pretend to execute them.
 3. For conversation, the backend adds bounded history and explicitly approved memories. Document mode adds retrieved passages; web mode adds search snippets.
-4. Ollama generates the answer locally. Text streams to the interface, and complete sentences can be spoken before generation finishes.
+4. The configured provider generates the answer: Ollama locally, or Groq online. Text streams to the interface, and complete sentences can be spoken before generation finishes.
 5. You can stop an answer or interrupt spoken playback. Completed conversations are saved locally; failed/cancelled partial answers are not saved as completed turns.
 
 Laptop actions use a separate permission and confirmation flow. The language model cannot execute arbitrary shell commands or directly control your computer.
@@ -147,7 +148,7 @@ npm ci
 npm run package:windows
 ```
 
-Output: `dist/YouAI Setup 0.4.0.exe`.
+Output: `dist/YouAI Setup 0.4.1.exe`.
 
 The installer includes the interface and backend source. First launch reuses supported local runtimes or downloads Python/Ollama, installs dependencies, and downloads models. A setup window shows progress; restarting retries an incomplete setup. The first-run setup is not an offline bundle of model weights.
 
@@ -180,11 +181,38 @@ Default locations:
 
 Model weights, databases, `.env` files, environments, generated installers and pairing credentials are excluded from Git. Audio is processed in memory and is not saved by the app. Deleting a memory removes it from future memory context, but old conversation messages remain until you clear them. Removing a document does not erase excerpts already saved in conversation history.
 
-Once dependencies and models are installed, ordinary chat, transcription, RAG and local voice playback use local components. The Python pipeline was checked with outbound sockets blocked; this is **not** a system-wide airplane-mode certification.
+In local mode, once dependencies and models are installed, ordinary chat, transcription, RAG and voice playback use local components. The Python pipeline was checked with outbound sockets blocked; this is **not** a system-wide airplane-mode certification.
 
-Web search is off by default. When enabled, only the current question is sent to the configured search service; stored history, memories and document contents are not sent to it. DuckDuckGo search uses the unofficial DDGS integration and can be unavailable or rate limited. Results are snippets, not full web pages. Brave is optional and requires your own API configuration. There is no automatic cloud LLM fallback.
+When Groq chat is selected, messages, bounded conversation history, approved memories and document passages included in answers or summaries are sent to Groq. Groq speech recognition uploads voice requests. Wake recognition, playback, database storage and document embeddings remain local. There is no silent provider fallback.
+
+Web search is off by default. When enabled, only the current question is sent to the configured search service; stored history, memories and document contents are not sent to it. DuckDuckGo search uses the unofficial DDGS integration and can be unavailable or rate limited. Results are snippets, not full web pages. Brave is optional and requires your own API configuration. Groq is an explicitly configured alternative, not an automatic fallback.
 
 Reminders need the app running and the laptop awake for timely delivery. The app does not wake a sleeping computer or deliver alarms while powered off. Windows notification settings can affect visibility.
+
+## Optional Groq API mode
+
+The current development laptop uses **Groq Qwen 3.8 27B for chat**, **Groq Whisper Large v3 Turbo for transcription**, and the **existing installed Windows voice for spoken replies**. Autumn/Orpheus text-to-speech is not enabled. A new checkout defaults to local mode until you configure the settings below.
+
+Use Groq to run chat and speech recognition online while keeping this app on your laptop. This does not deploy a public website or remove the local Ollama requirement for document embeddings.
+
+Create your own key in [Groq Console](https://console.groq.com/keys). Keep it on the backend, never in JavaScript, commits or shared screenshots. On Windows, use **Edit environment variables for your account** to set:
+
+- `GROQ_API_KEY`: your private key.
+- `YOUAI_LLM_PROVIDER`: `groq`.
+- `YOUAI_SPEECH_PROVIDER`: `groq`.
+- `YOUAI_GROQ_MODEL`: optional; defaults to `qwen/qwen3.8-27b`.
+
+Restart the backend. These specific settings also read Windows user environment values, so desktop launches can use them even if their parent process has an older environment. Process environment variables take precedence. The key is not returned by any API or sent to the browser.
+
+The default speech API model is `whisper-large-v3-turbo`. Status displays **Groq connected** and a notice explains the data sent online. API quotas, invalid credentials and connection failures are reported explicitly. There are no automatic billable retries. Provider limits and your account plan still apply; using an API is not unlimited free inference.
+
+To restore local processing, set `YOUAI_LLM_PROVIDER=ollama` and `YOUAI_SPEECH_PROVIDER=local`, then restart. Spoken replies continue using the same installed voices in either mode.
+
+Optional live integration check (sends only test prompts and, if present, a synthetic WAV fixture; uses a temporary database):
+
+```powershell
+.\.venv\Scripts\python.exe scripts/check_groq.py
+```
 
 ## Configuration
 
@@ -252,7 +280,7 @@ See [RELEASE_CHECKS.md](RELEASE_CHECKS.md) for the current results and unverifie
 
 The supported target is a **single-user Windows assistant backed by the user's laptop**. A GitHub push publishes source code; it does not publish a running assistant or upload the models.
 
-Uploading this code to Render or Vercel does not create a working public multi-user service. That would require hosted inference, authentication, per-user data isolation, persistent cloud storage, resource limits and a web-compatible alternative to Windows-only actions. These are not implemented. Android is paused and there is no working iOS application.
+Uploading this code to Render or Vercel does not create a working public multi-user service. Groq already supplies hosted chat and transcription, but the app still needs a public-server configuration, authentication, per-user data isolation, persistent cloud storage, resource limits and a hosted replacement for local Ollama document embeddings. The current backend restricts access to localhost or explicitly paired phones. Windows laptop actions cannot control a visitor's computer from a hosted website. These deployment changes are not implemented. Android is paused and there is no working iOS application.
 
 Near-term work is the remaining background-wake, sleep/resume and clean-machine acceptance testing. Other possible extensions include broader document/language testing, improved wake accuracy and additional explicitly approved task integrations. Calendar, email sending and unrestricted computer control are not currently supported.
 
