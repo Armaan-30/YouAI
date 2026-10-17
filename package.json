@@ -1,0 +1,67 @@
+{
+  "name": "youai",
+  "version": "0.4.0",
+  "private": true,
+  "description": "Local-first Windows voice assistant with Qwen2.5 through Ollama, document RAG, approved memory, reminders and opt-in web search.",
+  "scripts": {
+    "test": "playwright test",
+    "desktop": "electron .",
+    "package:windows": "node scripts/build_windows.cjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Armaan-30/YouAI.git"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Armaan-30/YouAI/issues"
+  },
+  "homepage": "https://github.com/Armaan-30/YouAI#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "electron": "^44.9.0",
+    "electron-builder": "^26.15.3"
+  },
+  "main": "desktop/main.js",
+  "author": "YouAI",
+  "build": {
+    "appId": "com.youai.desktop",
+    "productName": "YouAI",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "desktop/**/*",
+      "!desktop/workspace.json",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "packElevateHelper": false,
+      "allowElevation": false
+    },
+    "extraResources": [
+      {
+        "from": ".",
+        "to": "backend",
+        "filter": [
+          "app/**/*.py",
+          "web/**/*",
+          "scripts/setup_ocr.ps1",
+          "scripts/bootstrap_windows.ps1",
+          "setup.ps1",
+          "requirements.txt",
+          "LICENSE",
+          "THIRD_PARTY_NOTICES.md"
+        ]
+      }
+    ]
+  }
+}
