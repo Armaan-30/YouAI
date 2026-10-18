@@ -40,3 +40,7 @@ Groq integration additionally passed live model availability, streamed chat pers
 - [ ] Confirm the interactive installation wizard and a pristine Windows VM with Python/Ollama absent. The automated installer test reused installed runtimes; missing-runtime download/install branches are implemented but not validated on a clean machine.
 
 The installer remains unsigned. No signing certificate was supplied. Hosted deployment files are now included; live Render acceptance remains pending. See THIRD_PARTY_NOTICES.md for dependency/model terms before distributing binaries.
+
+## Hosted wake fix
+
+Browser suite extended to 21 checks: same-utterance wake/command, separate wake/command, unrelated-speech rejection, automatic rearming, toggle-off cleanup, permission-denial recovery and unsupported-browser fallback use a mocked recognition service. Real microphone/browser-provider recognition accuracy is not covered by these mocks and requires user acceptance.

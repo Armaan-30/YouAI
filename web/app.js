@@ -203,6 +203,15 @@ async function record(wakeMode = false) {
   };
   try {
     showError(""); setState("starting");
+    if(wakeMode && window.cloudMode){
+      const capture=new YouBrowserWake({
+        onReady:()=>{if(ticket===generation)setState('armed');},
+        onWake:()=>{if(ticket===generation)setState('listening');},
+        onError:fail,
+        onText:async text=>{if(ticket!==generation)return;recording=null;await send(text);}
+      });
+      recording=capture;capture.start();return;
+    }
     const capture = new YouAudio({
       onWake:()=>{if(ticket===generation) setState("listening");},
       onError:fail,
@@ -232,7 +241,11 @@ $("orb").onclick = async () => {
   else { await stopAll(); idle(); }
 };
 $("composer").onsubmit = async e => { e.preventDefault(); const value = $("prompt").value; if (value.trim()) { $("prompt").value=""; await send(value); } };
-$("wake").onchange = async () => { await stopAll(); idle(); };
+$("wake").onchange = async () => {
+  await stopAll();
+  if(window.cloudMode && $("wake").checked && !document.hidden) await record(true);
+  else idle();
+};
 $("open-panel").onclick = async () => { $("panel").showModal(); await Promise.all([refreshHistory(),refreshDocuments(),window.refreshFeatures?.()]).catch(e=>showError(e.message)); };
 $("close-panel").onclick = () => $("panel").close();
 $("clear").onclick = async () => {
@@ -374,12 +387,12 @@ if(window.cloudMode){
   $('speak').parentElement.lastChild.textContent=' Speak replies with a device voice (may use your browser’s online voice service)';
   $('sign-out').onclick=async()=>{await stopAll();await api('/api/auth/logout',{method:'POST'});location.replace('/login');};
   $('laptop-actions').hidden=true;
-  $('wake').checked=false;$('wake').disabled=true;
-  $('wake-help').textContent='Hosted preview: tap the circle to talk. Hey You requires the Windows app.';
+  $('wake').checked=false;$('wake').disabled=false;
+  $('wake-help').textContent='Say ‘Hey You’ followed by your request. Browser speech recognition may send microphone audio to its provider. Keep this page visible and the device unlocked. If unavailable, use the circle.';
   $('barge-in').checked=false;$('barge-in').disabled=true;
   $('barge-in').parentElement.nextElementSibling.textContent='Tap the circle to interrupt. Spoken interruption is available in the Windows app.';
   $('storage-note').textContent='Conversations, notes, approved memories and indexed documents are saved in your private account on the server.';
   $('document-help').textContent='Upload PDF, TXT or Markdown (up to 3 MB, 25 PDF pages and 50 passages per file). Hosted document search matches keywords; summaries read every indexed passage. Scanned PDFs use server OCR. Check extracted names and numbers.';
-  document.querySelector('.details p').textContent='Click-to-talk, Groq transcription and streaming answers, with speech playback using available device voices. Keep this page open for reminder alerts. Windows actions and Hey You are desktop features.';
+  document.querySelector('.details p').textContent='Click-to-talk, Groq transcription and streaming answers, with speech playback using available device voices. Keep this page open for reminder alerts. Hey You uses browser speech recognition while this page is visible. Windows actions require the desktop app.';
   document.querySelector('footer>span:last-child').textContent='YOU / WEB PREVIEW';
 }

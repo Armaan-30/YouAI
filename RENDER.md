@@ -8,9 +8,9 @@ The web profile runs independently of your laptop. It uses Groq for chat and tra
 
 This is an invitation-only preview for a small group, capped at 100 accounts. It is not an unlimited public service. The owner can access server files; account isolation prevents users from reading each other's app data, but is not end-to-end encryption.
 
-Supported: typed and click-to-talk conversation, streamed answers, click-to-interrupt, replay, available device voices, approved memory, notes, reminders while the page is open, document uploads, selected-document answers, summaries, OCR and optional web search.
+Supported: browser-based foreground Hey You (where SpeechRecognition is available), typed and click-to-talk conversation, streamed answers, click-to-interrupt, replay, available device voices, approved memory, notes, reminders while the page is open, document uploads, selected-document answers, summaries, OCR and optional web search.
 
-Desktop-only: Hey You detection, spoken interruption, Windows tray/shortcuts, local application launch, local folder access and folder watching. The web interface disables these controls. Browser voices may use the device vendor's online speech service. Device voices vary; the Windows Zira voice is not guaranteed on phones. Notifications are not scheduled push messages when the browser is closed. Overdue reminders appear on return. Reminder interpretation currently uses Asia/Kolkata for all accounts.
+Desktop-only: spoken interruption, Windows tray/shortcuts, local application launch, local folder access and folder watching. The web interface disables these controls. Browser voices may use the device vendor's online speech service. Device voices vary; the Windows Zira voice is not guaranteed on phones. Notifications are not scheduled push messages when the browser is closed. Overdue reminders appear on return. Reminder interpretation currently uses Asia/Kolkata for all accounts.
 
 ## Paid Blueprint setup
 
@@ -60,3 +60,7 @@ Local automated checks use synthetic accounts and a mock Groq service: `python s
 ## Container smoke test
 
 With Docker running: `docker build -t youai-cloud .`. Run behind an HTTPS proxy, bind a persistent directory to `/var/data`, and provide `GROQ_API_KEY`, `YOUAI_PUBLIC_ORIGIN` and `YOUAI_INVITE_CODE` (at least 32 characters) as runtime secrets. Never bake them into the image. Render supplies HTTPS automatically. The local HTTP health endpoint can be checked without a browser session; login requires HTTPS for the secure cookie.
+
+## Hosted Hey You
+
+Enable the Hey You toggle and allow microphone/speech recognition access. Say “Hey You” followed by your request. Hosted wake recognition uses the browser speech service, which may send microphone audio to its provider. Keep the page visible and the device unlocked. Listening pauses during answers, stops when the page is hidden, and resumes when you return if still enabled. Unsupported browsers and service/permission errors show a recovery message; click-to-talk remains available. The real-device wake accuracy check still needs user acceptance.

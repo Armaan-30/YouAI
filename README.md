@@ -299,10 +299,18 @@ Click **Deploy Web Service**. After the build and health check succeed, open the
 
 Use [RENDER.md](RENDER.md) and the included `render.yaml` / `Dockerfile` to deploy the web preview. The blueprint uses a paid service and persistent disk; it does not start billing until you create the resources in Render. The Groq API key stays in server secrets. Render supplies the public HTTPS URL.
 
-The hosted version supports private accounts, click-to-talk, streamed Groq answers, device voice playback, memory, notes, page-open reminders, document uploads/OCR, keyword retrieval, summaries and optional web search. It does not require your laptop or Ollama. Windows actions, tray controls, Hey You and spoken interruption remain desktop-only. No voice service change was made: Autumn/Orpheus remains disabled.
+The hosted version supports private accounts, click-to-talk, streamed Groq answers, device voice playback, memory, notes, page-open reminders, document uploads/OCR, keyword retrieval, summaries and optional web search. It does not require your laptop or Ollama. Windows actions, tray controls and spoken interruption remain desktop-only. Hosted Hey You uses browser speech recognition while the page is visible and the device is unlocked; browser support varies. No voice service change was made: Autumn/Orpheus remains disabled.
 
 The hosted profile is a small-group preview, not an unlimited public service. Password recovery, an administration UI, scheduled browser push notifications, multi-instance scaling and automated external backups remain future work. Real Render deployment, restart persistence and microphone/voice acceptance must be checked after configuring the service. Desktop background-wake, sleep/resume and clean-machine acceptance also remain documented checks.
 
 ## License
 
 YouAI's own source is under the [MIT License](LICENSE). Dependencies and model weights have separate terms. In particular, PyMuPDF uses AGPL/commercial licensing and Qwen2.5-3B has its own model license. Read [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) before redistributing a combined application or operating a hosted service.
+
+### Hey You on the hosted website
+
+Enable **Listen for Hey You**, allow microphone/speech recognition access, then say **Hey You, what can you do?** You can also say **Hey You**, pause, then speak your request. Listening pauses during replies and stops when you switch it off or hide the page. This is foreground browser listening, not a system-wide wake word.
+
+Hosted wake listening uses the browser's SpeechRecognition service, which may send microphone audio to the browser vendor. The recognized command is sent to YouAI/Groq for an answer; click-to-talk continues using Groq Whisper. Some browsers do not support recognition or their speech service may be unavailable; the app shows a recovery message and the microphone button remains available. See [browser recognition support and privacy](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition).
+
+After deploying an update, reload the page. If Render automatic deployment is disabled, choose **Manual Deploy → Deploy latest commit**. Free-demo data may reset on redeploy; recreate your account using the configured invitation code if necessary.
