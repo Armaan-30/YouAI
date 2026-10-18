@@ -1,0 +1,11 @@
+fastapi==0.143.2
+uvicorn==0.54.0
+python-multipart==0.0.32
+httpx==0.28.1
+tzdata==2026.2
+pypdf==6.21.0
+cryptography==50.0.2
+qrcode==8.2
+numpy==2.5.4
+pymupdf==1.28.2
+ddgs==9.16.0

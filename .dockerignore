@@ -1,0 +1,7 @@
+*
+!app/
+!app/*.py
+!web/
+!web/**
+!requirements-cloud.txt
+!Dockerfile

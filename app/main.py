@@ -9,7 +9,7 @@ from uuid import UUID
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request, Form, UploadFile, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -24,12 +24,17 @@ from app.config import setting
 from app.groq_provider import GroqProvider, ProviderError, SPEECH_MODEL
 
 ROOT = Path(__file__).resolve().parent.parent
+CLOUD = os.getenv('YOUAI_MODE') == 'cloud'
 DATA = Path(os.getenv("YOUAI_DATA_DIR", str(Path(os.getenv("LOCALAPPDATA", str(ROOT / ".runtime"))) / "YouAI")))
-store = Store(DATA / "youai.sqlite3")
-rag = Rag(store)
+if CLOUD:
+    from app.cloud_runtime import Proxy
+    store, rag = Proxy('store'), Proxy('rag')
+else:
+    store = Store(DATA / "youai.sqlite3")
+    rag = Rag(store)
 speech = Speech(DATA / "models")
-PROVIDER = setting('YOUAI_LLM_PROVIDER', 'ollama')
-SPEECH_PROVIDER = setting('YOUAI_SPEECH_PROVIDER', 'local')
+PROVIDER = 'groq' if CLOUD else setting('YOUAI_LLM_PROVIDER', 'ollama')
+SPEECH_PROVIDER = 'groq' if CLOUD else setting('YOUAI_SPEECH_PROVIDER', 'local')
 if PROVIDER not in ('ollama', 'groq') or SPEECH_PROVIDER not in ('local', 'groq'):
     raise ValueError('Choose ollama/groq for chat and local/groq for speech recognition.')
 MODEL = setting('YOUAI_GROQ_MODEL', 'qwen/qwen3.8-27b') if PROVIDER == 'groq' else os.getenv('YOUAI_MODEL', 'qwen2.5:3b')
@@ -58,6 +63,9 @@ async def warm_models():
 
 @asynccontextmanager
 async def lifespan(app):
+    if CLOUD:
+        yield
+        return
     preload = asyncio.create_task(warm_models()) if os.getenv("YOUAI_PRELOAD", "1") == "1" else None
     watcher = asyncio.create_task(features.watch_loop(store,rag))
     yield
@@ -74,9 +82,18 @@ active: dict[str, asyncio.Event] = {}
 chat_lock = asyncio.Lock()
 speech_lock = asyncio.Lock()
 wake_slots = asyncio.Semaphore(2)
+if CLOUD:
+    active, chat_lock, speech_lock = Proxy('active'), Proxy('chat_lock'), Proxy('speech_lock')
 
 @app.middleware("http")
 async def local_only(request: Request, call_next):
+    if CLOUD:
+        if not request.url.path.startswith('/static/'):
+            from app.cloud_runtime import current
+            try: current.get()
+            except LookupError:
+                return JSONResponse({'detail':'Use the authenticated cloud entry point.'},status_code=503)
+        return await call_next(request)
     pairing_config = mobile.read_config(DATA / "mobile")
     allowed_hosts = {"127.0.0.1", "localhost"}
     if pairing_config:
@@ -102,6 +119,8 @@ async def local_only(request: Request, call_next):
 
 @app.get("/")
 def home():
+    if CLOUD:
+        return HTMLResponse((ROOT / 'web' / 'index.html').read_text(encoding='utf-8').replace('<body>', '<body data-cloud="true">'))
     return FileResponse(ROOT / "web" / "index.html")
 
 @app.get("/api/mobile/pairing")
@@ -118,10 +137,10 @@ async def status():
     if PROVIDER == 'groq':
         remote = await groq.status()
         return {'model': MODEL, 'provider': PROVIDER, 'llm_ready': remote['ready'],
-                'speech_provider': SPEECH_PROVIDER,
+                'speech_provider': SPEECH_PROVIDER, 'cloud': CLOUD,
                 'speech_loaded': remote['speech_ready'] if SPEECH_PROVIDER == 'groq' else speech.model is not None,
                 'speech_model': SPEECH_MODEL if SPEECH_PROVIDER == 'groq' else speech.name,
-                'wake_ready': wake.path.is_dir(), 'timezone': tasks.ZONE.key, 'error': remote['error']}
+                'wake_ready': not CLOUD and wake.path.is_dir(), 'timezone': tasks.ZONE.key, 'error': remote['error']}
     available = []
     error = None
     try:
@@ -133,7 +152,7 @@ async def status():
         error = "Ollama is not running. Open Ollama, then retry."
     ready = MODEL in available
     return {"model": MODEL, 'provider': PROVIDER, "llm_ready": ready, "speech_loaded": speech.model is not None,
-            'speech_provider': SPEECH_PROVIDER,
+            'speech_provider': SPEECH_PROVIDER, 'cloud': CLOUD,
             "speech_model": SPEECH_MODEL if SPEECH_PROVIDER == 'groq' else speech.name, "wake_ready": wake.path.is_dir(),
             "timezone": tasks.ZONE.key,
             "error": error or (None if ready else f"Download the model: ollama pull {MODEL}")}
@@ -287,7 +306,7 @@ def identity_answer(prompt):
 
 def model_messages(prompt, context, sources=None):
     system = (
-        f"You are YouAI, a helpful voice assistant running locally on Windows. "
+        f"You are YouAI, a helpful voice assistant running {'as a hosted web app' if CLOUD else 'locally on Windows'}. "
         f"Your configured language model is {MODEL}, served {'online by Groq' if PROVIDER == 'groq' else 'locally by Ollama'}. "
         "These runtime facts override any mistaken identity claims in conversation history. "
         "When asked about your identity, accurately state the app name and configured model. "

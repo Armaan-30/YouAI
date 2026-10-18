@@ -16,7 +16,7 @@ MAX_CHARS = 300_000
 MAX_CHUNKS = 400
 INDEX_LIMIT = 4000
 
-def extract(filename, data, ocr_languages=None):
+def extract(filename, data, ocr_languages=None, page_limit=150):
     suffix = Path(filename).suffix.lower()
     warnings = []
     if suffix == ".pdf":
@@ -24,8 +24,8 @@ def extract(filename, data, ocr_languages=None):
             reader = PdfReader(io.BytesIO(data))
             if reader.is_encrypted:
                 raise ValueError("Password-protected PDFs are not supported. Import an unlocked copy.")
-            if len(reader.pages) > 150:
-                raise ValueError("Please use a PDF with at most 150 pages.")
+            if len(reader.pages) > page_limit:
+                raise ValueError(f"Please use a PDF with at most {page_limit} pages.")
             pages = []
             total = 0
             for number, page in enumerate(reader.pages, 1):
@@ -99,12 +99,15 @@ def ocr_page(data, index, ocr_languages=None):
         return page.get_text(textpage=textpage)
 
 class Rag:
-    def __init__(self, store, base="http://127.0.0.1:11434"):
+    def __init__(self, store, base="http://127.0.0.1:11434", lexical=False):
         self.store = store
+        self.lexical = lexical
         self.base = base
         self.lock = asyncio.Lock()
 
     async def fingerprint(self):
+        if self.lexical:
+            return 'keyword-retrieval-v1'
         async with httpx.AsyncClient(timeout=10, trust_env=False) as client:
             response = await client.get(self.base + "/api/tags")
             response.raise_for_status()
@@ -114,6 +117,9 @@ class Rag:
         raise ValueError(f"The embedding model is missing. Run: ollama pull {MODEL}")
 
     async def embed(self, texts, query=False):
+        if self.lexical:
+            # Hosted retrieval ranks actual words, so it does not need model vectors.
+            return np.zeros((len(texts), 1), dtype=np.float32)
         prefix = "search_query: " if query else "search_document: "
         async with httpx.AsyncClient(timeout=120, trust_env=False) as client:
             response = await client.post(self.base + "/api/embed", json={
@@ -130,6 +136,8 @@ class Rag:
         return vectors / norms
 
     async def import_file(self, filename, data, ocr_languages=None):
+        if self.lexical and len(data) > 3 * 1024 * 1024:
+            raise ValueError('Hosted uploads are limited to 3 MB per document.')
         if not data or len(data) > MAX_BYTES:
             raise ValueError("Choose a non-empty document of at most 10 MB.")
         name = Path(filename.replace("\\", "/")).name[:200]
@@ -139,7 +147,9 @@ class Rag:
                 existing = db.execute("SELECT id,name FROM documents WHERE sha256=?", (digest,)).fetchone()
                 if existing:
                     return {"id":existing["id"], "name":existing["name"], "duplicate":True, "warnings":[]}
-            chunks, warnings = await asyncio.to_thread(extract, name, data, ocr_languages)
+            chunks, warnings = await asyncio.to_thread(extract, name, data, ocr_languages, 25 if self.lexical else 150)
+            if self.lexical and len(chunks) > 50:
+                raise ValueError('Hosted documents are limited to 50 passages. Split this document into smaller files.')
             with self.store.connect() as db:
                 if db.execute("SELECT count(*) FROM document_chunks").fetchone()[0] + len(chunks) > INDEX_LIMIT:
                     raise ValueError("The local index is full. Remove documents before importing more.")
@@ -184,8 +194,13 @@ class Rag:
                 item_vector = np.frombuffer(row["embedding"], dtype="<f4")
                 if len(item_vector) != len(vector):
                     raise ValueError("The index has incompatible vectors. Re-import your documents.")
-                score = float(np.dot(vector, item_vector))
-                if score >= 0.45:
+                if self.lexical:
+                    terms = set(re.findall(r'\w+', query.casefold())) - {'the','a','an','is','are','what','when','where','how','to','of','in','my','and','for','does','it'}
+                    words = set(re.findall(r'\w+', row['content'].casefold()))
+                    score = len(terms & words) / max(1, len(terms))
+                else:
+                    score = float(np.dot(vector, item_vector))
+                if score >= (0.2 if self.lexical else 0.45):
                     ranked.append((score, row))
             ranked.sort(key=lambda pair:pair[0], reverse=True)
             selected, budget = [], 3600

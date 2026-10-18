@@ -2,9 +2,9 @@
 
 YouAI is a local-first personal assistant with a simple circular microphone button. Click it or enable **“Hey You”**, speak naturally, and receive a spoken response. You can also type, ask questions about your documents, save approved memories, set reminders, and perform a small set of approved laptop actions.
 
-**Version 0.4.1 · Windows preview · Status updated 17 October 2026**
+**Version 0.5.0 · Windows and hosted web previews · Status updated 18 October 2026**
 
-The working implementation runs on a Windows laptop. Android development is paused, iOS is not implemented, and public cloud deployment is not configured. This is a functional preview with documented test limits, not a production-ready hosted service.
+YouAI has a Windows desktop profile and a separate Render web profile. The hosted profile uses Groq without a laptop connection, private web accounts and persistent server storage. Deployment files are included; a live Render deployment still needs account configuration and acceptance testing. Android development is paused and iOS is not implemented. See [RENDER.md](RENDER.md) for costs, setup and web feature differences.
 
 ## Project status
 
@@ -22,6 +22,7 @@ Implemented:
 - Electron desktop window, tray icon, optional startup with Windows, **Ctrl+Alt+Space**, and native reminder notifications.
 - Free opt-in DuckDuckGo search without an account or API key; optional Brave integration.
 - Optional Groq chat and speech recognition, with visible online-processing disclosure and local Ollama mode retained.
+- Hosted web profile: invitation-based accounts, isolated user data, session authentication, request limits and laptop-independent keyword document retrieval.
 - Windows installer containing the backend source and interface, with first-run dependency and model setup.
 
 Validation completed:
@@ -148,7 +149,7 @@ npm ci
 npm run package:windows
 ```
 
-Output: `dist/YouAI Setup 0.4.1.exe`.
+Output after a fresh build: `dist/YouAI Setup 0.5.0.exe`. Existing 0.4.1 installers do not include the hosted-profile changes.
 
 The installer includes the interface and backend source. First launch reuses supported local runtimes or downloads Python/Ollama, installs dependencies, and downloads models. A setup window shows progress; restarting retries an incomplete setup. The first-run setup is not an offline bundle of model weights.
 
@@ -278,11 +279,11 @@ See [RELEASE_CHECKS.md](RELEASE_CHECKS.md) for the current results and unverifie
 
 ## Deployment and future work
 
-The supported target is a **single-user Windows assistant backed by the user's laptop**. A GitHub push publishes source code; it does not publish a running assistant or upload the models.
+Use [RENDER.md](RENDER.md) and the included `render.yaml` / `Dockerfile` to deploy the web preview. The blueprint uses a paid service and persistent disk; it does not start billing until you create the resources in Render. The Groq API key stays in server secrets. Render supplies the public HTTPS URL.
 
-Uploading this code to Render or Vercel does not create a working public multi-user service. Groq already supplies hosted chat and transcription, but the app still needs a public-server configuration, authentication, per-user data isolation, persistent cloud storage, resource limits and a hosted replacement for local Ollama document embeddings. The current backend restricts access to localhost or explicitly paired phones. Windows laptop actions cannot control a visitor's computer from a hosted website. These deployment changes are not implemented. Android is paused and there is no working iOS application.
+The hosted version supports private accounts, click-to-talk, streamed Groq answers, device voice playback, memory, notes, page-open reminders, document uploads/OCR, keyword retrieval, summaries and optional web search. It does not require your laptop or Ollama. Windows actions, tray controls, Hey You and spoken interruption remain desktop-only. No voice service change was made: Autumn/Orpheus remains disabled.
 
-Near-term work is the remaining background-wake, sleep/resume and clean-machine acceptance testing. Other possible extensions include broader document/language testing, improved wake accuracy and additional explicitly approved task integrations. Calendar, email sending and unrestricted computer control are not currently supported.
+The hosted profile is a small-group preview, not an unlimited public service. Password recovery, an administration UI, scheduled browser push notifications, multi-instance scaling and automated external backups remain future work. Real Render deployment, restart persistence and microphone/voice acceptance must be checked after configuring the service. Desktop background-wake, sleep/resume and clean-machine acceptance also remain documented checks.
 
 ## License
 

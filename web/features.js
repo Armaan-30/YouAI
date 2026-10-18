@@ -16,7 +16,7 @@ window.refreshFeatures=async()=>{
       await api('/api/memories/'+memory.id,{method:'DELETE'});await refreshFeatures();
     });row.append(text,edit,remove);$('memories').append(row);
   }
-  if(window.YouAIPlatform?.native)return;
+  if(window.YouAIPlatform?.native || window.cloudMode)return;
   const {permissions}=await api('/api/desktop/permissions');$('permissions').replaceChildren();$('action-location').replaceChildren();
   for(const entry of permissions){
     const option=document.createElement('option');option.value=entry.id;option.textContent=entry.kind+': '+entry.path;$('action-location').append(option);
@@ -52,7 +52,7 @@ $('use-documents').onchange=()=>{if($('use-documents').checked)$('use-web').chec
 async function populateVoices(){
   const selected=localStorage.getItem('youai-voice')||'';$('voice-choice').replaceChildren(new Option('Automatic (Zira preferred)',''));
   const voices=window.desktop?.getVoices?await desktop.getVoices().catch(()=>[]):speechSynthesis.getVoices();
-  for(const voice of voices.filter(v=>v.localService))$('voice-choice').add(new Option(voice.name+' · '+voice.lang,voice.voiceURI));
+  for(const voice of voices.filter(v=>window.cloudMode || v.localService))$('voice-choice').add(new Option(voice.name+' · '+voice.lang,voice.voiceURI));
   $('voice-choice').value=selected;
   if(selected && !voices.some(v=>v.voiceURI===selected))localStorage.removeItem('youai-voice');
 }
@@ -80,6 +80,7 @@ window.handleLaptopCommand=async text=>{
   const open=text.match(/^open (?:app )?(.+?)[.!]?$/i);
   const find=text.match(/^(?:find|search) files (?:named|containing) (.+)/i);
   if(!open&&!find)return false;
+  if(window.cloudMode){showError('Laptop actions require the Windows desktop app.');return true;}
   await stopAll();if(!$('panel').open)$('panel').showModal();
   await refreshFeatures();
   if(open){

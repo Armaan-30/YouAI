@@ -1,6 +1,6 @@
 {
   "name": "youai",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "private": true,
   "description": "Local-first Windows voice assistant with Qwen2.5 through Ollama, document RAG, approved memory, reminders and opt-in web search.",
   "scripts": {

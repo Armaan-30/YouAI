@@ -6,6 +6,11 @@
 #sources summary { cursor:pointer; }
 #document-upload { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
 #document-file { max-width:100%; }
+#login-form { display:grid; gap:18px; width:min(400px,100%); margin:28px auto; text-align:left; }
+#login-form label { display:grid; gap:8px; font-size:13px; }
+#login-form input { width:100%; box-sizing:border-box; padding:12px; border:1px solid #cad4c4; border-radius:8px; background:#fff; color:#28362f; }
+#login-form button { padding:12px; border:1px solid #bacbad; border-radius:8px; background:#e4eadc; color:#28362f; cursor:pointer; }
+#login-error { color:#964f3c; font-size:13px; }
 #pairing-result img { width:220px; max-width:100%; background:white; padding:8px; }
 #pairing-result textarea { width:100%; min-height:80px; }
 #document-status { font-size:13px; }

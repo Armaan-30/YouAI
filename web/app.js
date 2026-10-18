@@ -1,3 +1,4 @@
+window.cloudMode = document.body.dataset.cloud === 'true';
 const $ = (id) => document.getElementById(id);
 let interruptionCapture = null;
 let state = "idle", generation = 0, recording = null, requestAbort = null;
@@ -13,6 +14,7 @@ function setState(next) {
 function showError(message) { $("error").hidden = !message; $("error").textContent = message || ""; }
 async function api(path, options = {}) {
   const response = await fetch(path, {...options, headers: {"X-YouAI":"1", ...options.headers}});
+  if(response.status===401 && window.cloudMode){location.replace("/login");throw new Error("Sign in to continue.");}
   const data = await response.json();
   if (!response.ok) throw new Error(typeof data.detail === "string" ? data.detail : "That request could not be completed.");
   return data;
@@ -25,12 +27,16 @@ async function refresh() {
     const onlineChat=result.provider==='groq', onlineSpeech=result.speech_provider==='groq';
     $("connection").textContent = ready ? (onlineChat ? 'Groq connected · '+result.model : 'Local model connected') : (onlineChat ? 'Groq unavailable' : 'Local model unavailable');
     const notice=$('provider-notice');notice.hidden=!(onlineChat||onlineSpeech);
-    notice.textContent=[onlineChat?'Online chat: messages, recent conversation, approved memories and document passages used for answers/summaries are sent to Groq.':'',onlineSpeech?'Voice requests are uploaded to Groq for transcription. Wake listening and spoken playback stay local.':''].filter(Boolean).join(' ');
+    notice.textContent=[onlineChat?'Online chat: messages, recent conversation, approved memories and document passages used for answers/summaries are sent to Groq.':'',onlineSpeech?'Voice requests are uploaded to Groq for transcription. Spoken playback uses your device.':''].filter(Boolean).join(' ');
     $('processing-location').textContent=onlineChat||onlineSpeech?'Groq online processing · storage on your laptop':'On your laptop. In your control.';
     hints.transcribing=onlineSpeech?'Transcribing your voice through Groq.':'Turning your voice into words, here on your laptop.';
+    if(window.cloudMode){
+      $('processing-location').textContent='Groq online processing · private account storage on server';
+      $('provider-notice').textContent+=' Saved conversations and documents are stored on the server. Document search uses keyword matching.';
+    }
     if (!ready) showError(result.error);
     else showError("");
-  } catch { $("connection").textContent = "App disconnected"; showError("The local app is offline. Run start.ps1, then reload this page."); }
+  } catch { $("connection").textContent = "App disconnected"; showError("The app is unreachable. Check your connection and reload the page."); }
 }
 async function refreshHistory() {
   const [history, notes] = await Promise.all([api("/api/history"), api("/api/notes")]);
@@ -99,8 +105,8 @@ async function say(text, ticket) {
     });
   }
   if (ticket !== generation || !$("speak").checked) return;
-  const voices = speechSynthesis.getVoices().filter(v => v.localService);
-  if (!voices.length) { showError("No local speech voice is available. Install a Windows speech voice or use the text response."); return; }
+  const voices = speechSynthesis.getVoices().filter(v => window.cloudMode || v.localService);
+  if (!voices.length) { showError(window.cloudMode ? "This browser has no speech voice available. Try another browser or use the text response." : "No local speech voice is available. Install a Windows speech voice or use the text response."); return; }
   // These installed Windows voices are female; the browser has no gender field.
   const voice = voices.find(v => v.voiceURI === localStorage.getItem("youai-voice")) || voices.find(v => /\bZira\b/i.test(v.name))
     || voices.find(v => /\bHeera\b/i.test(v.name))
@@ -317,7 +323,7 @@ async function refreshDocuments() {
 $("document-upload").onsubmit=async event=>{
   event.preventDefault(); const file=$("document-file").files[0];
   if(!file){$("document-status").textContent="Choose a document first.";return;}
-  $("import-document").disabled=true;$("document-status").textContent="Reading and indexing your document locally…";
+  $("import-document").disabled=true;$("document-status").textContent=window.cloudMode?"Uploading and indexing your document on the server…":"Reading and indexing your document locally…";
   try {
     const form=new FormData();form.append("document",file);form.append("ocr_languages",$("ocr-language").value);
     const result=await api("/api/documents",{method:"POST",body:form});
@@ -361,4 +367,19 @@ async function startInterruption() {
   });
   interruptionCapture=capture;
   try{await capture.start(true);}catch(error){interruptionCapture=null;showError("Spoken interruption unavailable: "+error.message);}
+}
+
+if(window.cloudMode){
+  $('sign-out').hidden=false;
+  $('speak').parentElement.lastChild.textContent=' Speak replies with a device voice (may use your browser’s online voice service)';
+  $('sign-out').onclick=async()=>{await stopAll();await api('/api/auth/logout',{method:'POST'});location.replace('/login');};
+  $('laptop-actions').hidden=true;
+  $('wake').checked=false;$('wake').disabled=true;
+  $('wake-help').textContent='Hosted preview: tap the circle to talk. Hey You requires the Windows app.';
+  $('barge-in').checked=false;$('barge-in').disabled=true;
+  $('barge-in').parentElement.nextElementSibling.textContent='Tap the circle to interrupt. Spoken interruption is available in the Windows app.';
+  $('storage-note').textContent='Conversations, notes, approved memories and indexed documents are saved in your private account on the server.';
+  $('document-help').textContent='Upload PDF, TXT or Markdown (up to 3 MB, 25 PDF pages and 50 passages per file). Hosted document search matches keywords; summaries read every indexed passage. Scanned PDFs use server OCR. Check extracted names and numbers.';
+  document.querySelector('.details p').textContent='Click-to-talk, Groq transcription and streaming answers, with speech playback using available device voices. Keep this page open for reminder alerts. Windows actions and Hey You are desktop features.';
+  document.querySelector('footer>span:last-child').textContent='YOU / WEB PREVIEW';
 }

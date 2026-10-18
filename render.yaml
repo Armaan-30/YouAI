@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: youai
+    runtime: docker
+    plan: 0.5c-512mb
+    healthCheckPath: /healthz
+    disk:
+      name: youai-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: YOUAI_MODE
+        value: cloud
+      - key: YOUAI_DATA_DIR
+        value: /var/data/youai
+      - key: GROQ_API_KEY
+        sync: false
+      - key: YOUAI_INVITE_CODE
+        generateValue: true

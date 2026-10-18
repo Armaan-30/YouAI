@@ -1,4 +1,16 @@
-# Windows 0.4.1 release checks
+# Version 0.5.0 hosted and Windows checks
+
+## Hosted profile (18 October 2026)
+
+- Python suite: 44 tests, including a subprocess integration check for invitation registration, authentication, secure cookies, CSRF rejection, concurrent user isolation, document retrieval with streamed answers, restart persistence and logout revocation.
+- Browser suite: 18 checks, including hosted controls, server-storage disclosure and sign-in error recovery.
+- Live Groq streaming through the authenticated cloud gateway completed and persisted a synthetic test conversation.
+- Automated cloud checks use synthetic accounts and mocked Groq responses. The existing live Groq checks below are separate evidence.
+- Docker is installed, but its Linux engine was unavailable on this laptop; a Linux container build has not yet been verified.
+- No Render service has been created. Actual HTTPS deployment, persistent-disk restart, browser microphone/voice and OCR within the Linux container require acceptance after deployment.
+- The Render blueprint is a paid small-group preview with a persistent disk, not a permanent free hosting promise.
+
+## Prior Windows 0.4.1 evidence
 
 ## Verified on this laptop
 
@@ -27,4 +39,4 @@ Groq integration additionally passed live model availability, streamed chat pers
 - [ ] Sleep across a reminder due time and confirm delivery after resume.
 - [ ] Confirm the interactive installation wizard and a pristine Windows VM with Python/Ollama absent. The automated installer test reused installed runtimes; missing-runtime download/install branches are implemented but not validated on a clean machine.
 
-The installer remains unsigned. No signing certificate was supplied. Public cloud deployment is not configured. See THIRD_PARTY_NOTICES.md for dependency/model terms before distributing binaries.
+The installer remains unsigned. No signing certificate was supplied. Hosted deployment files are now included; live Render acceptance remains pending. See THIRD_PARTY_NOTICES.md for dependency/model terms before distributing binaries.
