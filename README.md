@@ -279,6 +279,24 @@ See [RELEASE_CHECKS.md](RELEASE_CHECKS.md) for the current results and unverifie
 
 ## Deployment and future work
 
+### Free Render demo setup
+
+For a temporary free demo, choose **New → Web Service**, connect **Armaan-30/YouAI**, select branch **main**, choose the **Docker** runtime and select the **Free** instance. The repository's Blueprint configures paid hosting, so do not use **New → Blueprint** for this free setup.
+
+Under **Environment Variables**, configure:
+
+- `GROQ_API_KEY`: your own Groq API key, entered privately in Render.
+- `YOUAI_INVITE_CODE`: your private random invitation code of at least 32 characters. Save it for account registration. The actual code belongs in Render, not this public README.
+- `YOUAI_DATA_DIR`: `/tmp/youai` (copy this value exactly).
+
+Under **Advanced → Health Check Path**, enter `/healthz`. This is a separate setting, not an environment variable. Leave the Docker start command unchanged; the image starts the authenticated cloud entry point. Render supplies the HTTPS URL automatically through `RENDER_EXTERNAL_URL`.
+
+Click **Deploy Web Service**. After the build and health check succeed, open the service URL and choose **Create account**. Enter a username (3–40 lowercase letters, numbers or underscores), a password of at least 12 characters and the same invitation code you saved in Render. Existing users sign in with their username and password; the invitation is only needed for registration. Share the invitation privately with people you want to admit. Their requests use the owner's Groq quota.
+
+**Free hosting is temporary:** accounts, chats, memories and indexed documents can be lost when the service restarts, redeploys or sleeps. Free services also have wake-up delays. This setup has no persistent disk; use it for a demo, not important saved data. See [Render's free-service limitations](https://render.com/docs/free). Setup instructions are not confirmation that a live deployment has passed testing.
+
+### Persistent paid deployment
+
 Use [RENDER.md](RENDER.md) and the included `render.yaml` / `Dockerfile` to deploy the web preview. The blueprint uses a paid service and persistent disk; it does not start billing until you create the resources in Render. The Groq API key stays in server secrets. Render supplies the public HTTPS URL.
 
 The hosted version supports private accounts, click-to-talk, streamed Groq answers, device voice playback, memory, notes, page-open reminders, document uploads/OCR, keyword retrieval, summaries and optional web search. It does not require your laptop or Ollama. Windows actions, tray controls, Hey You and spoken interruption remain desktop-only. No voice service change was made: Autumn/Orpheus remains disabled.

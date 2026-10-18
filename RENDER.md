@@ -12,7 +12,7 @@ Supported: typed and click-to-talk conversation, streamed answers, click-to-inte
 
 Desktop-only: Hey You detection, spoken interruption, Windows tray/shortcuts, local application launch, local folder access and folder watching. The web interface disables these controls. Browser voices may use the device vendor's online speech service. Device voices vary; the Windows Zira voice is not guaranteed on phones. Notifications are not scheduled push messages when the browser is closed. Overdue reminders appear on return. Reminder interpretation currently uses Asia/Kolkata for all accounts.
 
-## Setup
+## Paid Blueprint setup
 
 1. Push these changes to your GitHub repository.
 2. In Render, choose **New → Blueprint**, connect the repository and use `render.yaml`.
@@ -37,11 +37,23 @@ Existing laptop accounts/data are not automatically uploaded. This deployment st
 
 ## Free temporary demo
 
+For this option, use **New → Web Service**, not **Blueprint**. Connect **Armaan-30/YouAI**, select **main**, choose **Docker** and select the **Free** instance type. Do not attach a disk.
+
+Add these settings in **Environment Variables**:
+
+- `GROQ_API_KEY`: your own key, kept private.
+- `YOUAI_INVITE_CODE`: your private random code of at least 32 characters. Keep the value in Render and your password manager, not in GitHub.
+- `YOUAI_DATA_DIR`: `/tmp/youai`.
+
+In **Advanced → Health Check Path**, enter `/healthz`. This is not an environment variable. Keep the Docker start command unchanged. Render provides `RENDER_EXTERNAL_URL` automatically; no custom domain is required.
+
+Deploy, wait for the build and health check, then open the generated URL. Choose **Create account** and enter a username, a password of at least 12 characters and your invitation code. Later sign-ins only require the username and password. Each invited person creates their own account; everyone shares the app owner's Groq quota. Never publish your actual invitation code or API key in this repository.
+
 Render free web services cannot attach this persistent disk. If you manually select free hosting without a disk, accounts and saved data can disappear on restart, redeploy or sleep. That is a disposable demo, not the supported persistent setup. Do not use Render's expiring free database as a permanent-storage promise. See [Render free limits](https://render.com/docs/free) and [persistent disk documentation](https://render.com/docs/disks).
 
 ## Validation before sharing
 
-Create two accounts and confirm separate histories/documents. Try a typed question and a real microphone question, import a short document and ask about it, preview a device voice, interrupt a reply, and verify an overdue reminder. Restart the service and confirm data survives. Check narrow-screen layout, sign-out, and Groq quota errors. Only then share the URL with your group.
+Create two accounts and confirm separate histories/documents. Try a typed question and a real microphone question, import a short document and ask about it, preview a device voice, interrupt a reply, and verify an overdue reminder. For the paid persistent setup, restart the service and confirm data survives; do not expect persistence in the free demo. Check narrow-screen layout, sign-out, and Groq quota errors. Only then share the URL with your group.
 
 Local automated checks use synthetic accounts and a mock Groq service: `python scripts/check_cloud.py`, the Python suite and the browser suite. A live Render deployment and real mobile microphone/audio acceptance are separate checks; they have not been completed merely by running these tests.
 
